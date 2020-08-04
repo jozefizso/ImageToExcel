@@ -18,7 +18,6 @@ namespace ImageToExcel
 
             var worksheetPart = workbookpart.AddNewPart<WorksheetPart>();
             var stylesPart = workbookpart.AddNewPart<WorkbookStylesPart>();
-            stylesPart.Stylesheet = new Stylesheet();
             worksheetPart.Worksheet = new Worksheet(
                 new SheetViews(),
                 new Columns(),
@@ -48,26 +47,33 @@ namespace ImageToExcel
             };
             sheetViews?.Append(sheetView);
 
-            var styleSheet = spreadsheetDocument.WorkbookPart.WorkbookStylesPart.Stylesheet;
-            styleSheet.Fills = new Fills() { Count = 0 };
-            styleSheet.CellFormats = new CellFormats() { Count = 0 };
+            var fonts = new Fonts(new Font(new FontSize() { Val = 10 }));
+            var fills = new Fills(new Fill(new PatternFill() { PatternType = PatternValues.None })) { Count = 1 };
+            var borders = new Borders(new Border()) { Count = 1 };
+            var cellFormats = new CellFormats(new CellFormat()) { Count = 1 };
+            var stylesheet = new Stylesheet(fonts, fills, borders, cellFormats);
+            stylesPart.Stylesheet = stylesheet;
 
             var columns = worksheet.GetFirstChild<Columns>();
-            columns?.Append(new Column() { Min = 1, Max = 255, Width = 2, CustomWidth = true });
+            columns?.Append(new Column() { Min = 1, Max = 255, Width = 1, CustomWidth = true });
 
             var sheetData = worksheet.GetFirstChild<SheetData>();
 
-            for (uint row = 1; row <= 20; row++)
+            for (uint row = 1; row <= 100; row++)
             {
-                var r = new Row() { RowIndex = row, Height = 10, CustomHeight = true };
+                var r = new Row() { RowIndex = row, Height = 4, CustomHeight = true };
                 sheetData.Append(r);
 
                 Cell previousCell = null;
-                for (uint col = 1; col <= 20; col++)
+                for (uint col = 1; col <= 100; col++)
                 {
-                    var rc = row * 10;
-                    var gc = col * 10;
-                    var bc = row + col * 10;
+                    var rc = col * 2;
+                    var gc = row * 2;
+                    var bc = row + col;
+                    if (gc > 255)
+                    {
+                        gc = 256;
+                    }
                     if (bc > 255)
                     {
                         bc = 256;
@@ -87,14 +93,15 @@ namespace ImageToExcel
                         }
                     };
 
-                    styleSheet.Fills.Append(fill);
-                    var fid = styleSheet.Fills.Count++;
+                    stylesheet.Fills.Append(fill);
+                    var fid = stylesheet.Fills.Count++;
 
                     var cellFormat = new CellFormat();
                     cellFormat.FillId = fid;
-                    styleSheet.CellFormats.Append(cellFormat);
+                    cellFormat.ApplyFill = true;
+                    stylesheet.CellFormats.Append(cellFormat);
 
-                    var styleId = styleSheet.CellFormats.Count++;
+                    var styleId = stylesheet.CellFormats.Count++;
 
 
                     char columnName = Convert.ToChar(col + 64);
@@ -112,7 +119,7 @@ namespace ImageToExcel
                 }
             }
 
-            styleSheet.Save();
+            stylesheet.Save();
             worksheet.Save();
             workbookpart.Workbook.Save();
             spreadsheetDocument.Close();
